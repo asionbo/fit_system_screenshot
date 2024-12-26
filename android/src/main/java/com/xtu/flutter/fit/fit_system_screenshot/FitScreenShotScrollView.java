@@ -15,7 +15,7 @@ public class FitScreenShotScrollView extends ScrollView {
     private boolean needCallBack = true;
     private ScrollListener scrollViewListener;
 
-    FitScreenShotScrollView(Context context) {
+    public FitScreenShotScrollView(Context context) {
         super(context);
         setOverScrollMode(View.OVER_SCROLL_NEVER);
         setVerticalScrollBarEnabled(false);
@@ -28,25 +28,31 @@ public class FitScreenShotScrollView extends ScrollView {
                 ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
-    void setScrollViewListener(@NonNull ScrollListener scrollViewListener) {
+    public void setScrollViewListener(@NonNull ScrollListener scrollViewListener) {
+        if (scrollViewListener == null) {
+            throw new IllegalArgumentException("ScrollListener cannot be null");
+        }
         this.scrollViewListener = scrollViewListener;
     }
 
     @Override
     protected void onScrollChanged(int l, int t, int oldL, int oldT) {
         super.onScrollChanged(l, t, oldL, oldT);
-        if (scrollViewListener != null && needCallBack) scrollViewListener.onScroll(t);
+        if (scrollViewListener != null && needCallBack) {
+            scrollViewListener.onScroll(t);
+        }
     }
 
-    void updateScrollLength(double scrollHeight) {
-        if (this.contentViewHeight == scrollHeight) return;
-        this.contentViewHeight = (int) scrollHeight;
+    public void updateScrollLength(double scrollHeight) {
+        int newHeight = (int) scrollHeight;
+        if (this.contentViewHeight == newHeight) return;
+        this.contentViewHeight = newHeight;
         ViewGroup.LayoutParams layoutParams = contentView.getLayoutParams();
         layoutParams.height = this.contentViewHeight;
         this.contentView.setLayoutParams(layoutParams);
     }
 
-    void scrollToWithoutCallback(int position) {
+    public void scrollToWithoutCallback(int position) {
         this.needCallBack = false;
         scrollTo(0, position);
         this.needCallBack = true;

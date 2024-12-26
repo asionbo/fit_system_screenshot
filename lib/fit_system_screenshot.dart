@@ -10,7 +10,6 @@ const String _METHOD_CHANNEL_NAME = 'fit.system.screenshot.method';
 const String _EVENT_CHANNEL_NAME = 'fit.system.screenshot.event';
 
 typedef void OnScreenShotScroll(double offset);
-
 typedef void Dispose();
 
 final double radio = window.devicePixelRatio;
@@ -18,33 +17,37 @@ final double radio = window.devicePixelRatio;
 class _FitSystemScreenshot {
   MethodChannel? _methodChannel;
   StreamSubscription? _subscription;
-
   OnScreenShotScroll? onScreenShotScroll;
-
   bool isScreenShot = false;
 
   ///应用启动时调用，初始化截屏环境
   void init() {
     if (!Platform.isAndroid) return;
-    this._methodChannel = MethodChannel(_METHOD_CHANNEL_NAME);
+    _methodChannel = MethodChannel(_METHOD_CHANNEL_NAME);
     EventChannel _eventChannel = EventChannel(_EVENT_CHANNEL_NAME);
-    this._subscription = _eventChannel.receiveBroadcastStream().listen((args) {
-      double top = args['top']!;
-      isScreenShot = true;
-      onScreenShotScroll?.call(top / radio);
-      isScreenShot = false;
+    _subscription = _eventChannel.receiveBroadcastStream().listen((args) {
+      double? top = args['top'];
+      if (top != null) {
+        isScreenShot = true;
+        onScreenShotScroll?.call(top / radio);
+        isScreenShot = false;
+      } else {
+        // Handle null value scenario
+        print('Warning: Received null for "top" from event stream');
+      }
+    }, onError: (error) {
+      // Handle stream errors
+      print('Error in event stream: $error');
     });
   }
 
   ///应用退出时调用，释放截屏资源
   void release() {
     if (!Platform.isAndroid) return;
-    this._subscription?.cancel();
+    _subscription?.cancel();
   }
 
   ///当首屏页面数据加载完成后调用
-  ///注意: 当A页面打开B页面，再退回到A页面时，A页面需要重新调用该方法
-  ///返回一个函数，释放当前页面截屏资源
   Dispose attachToPage<S extends State<StatefulWidget>>(
     GlobalKey<S> scrollAreaKey,
     ScrollController scrollController,
@@ -58,18 +61,20 @@ class _FitSystemScreenshot {
       if (isNestedScrollView) {
         NestedScrollViewState? nestedState =
             scrollAreaKey.currentState as NestedScrollViewState?;
-        if (nestedState == null) return;
-        ScrollPosition innerPos = nestedState.innerController.position;
-        newLength += (innerPos.viewportDimension + innerPos.maxScrollExtent);
-        ScrollPosition outPos = nestedState.outerController.position;
-        newLength += outPos.maxScrollExtent;
+        if (nestedState != null) {
+          ScrollPosition innerPos = nestedState.innerController.position;
+          newLength += (innerPos.viewportDimension + innerPos.maxScrollExtent);
+          ScrollPosition outPos = nestedState.outerController.position;
+          newLength += outPos.maxScrollExtent;
+        }
       } else {
         ScrollPosition position = scrollController.position;
         newLength = position.viewportDimension + position.maxScrollExtent;
       }
-      if (currentScrollLength == newLength) return;
-      currentScrollLength = newLength;
-      updateScrollLength(newLength);
+      if (currentScrollLength != newLength) {
+        currentScrollLength = newLength;
+        updateScrollLength(newLength);
+      }
     };
     final onScrollListener = () {
       refreshScrollLength();
@@ -93,12 +98,14 @@ class _FitSystemScreenshot {
   void updateScrollAreaWithKey(GlobalKey scrollAreaKey) {
     if (!Platform.isAndroid) return;
     BuildContext? context = scrollAreaKey.currentContext;
-    if (context == null) return;
-    RenderObject? renderBox = (context as Element).renderObject;
-    if (renderBox == null) return;
-    Size size = (renderBox as RenderBox).size;
-    Offset offset = renderBox.localToGlobal(Offset.zero);
-    updateScrollArea(offset & size);
+    if (context != null) {
+      RenderObject? renderBox = (context as Element).renderObject;
+      if (renderBox is RenderBox) {
+        Size size = renderBox.size;
+        Offset offset = renderBox.localToGlobal(Offset.zero);
+        updateScrollArea(offset & size);
+      }
+    }
   }
 
   void updateScrollArea(Rect scrollArea) {
