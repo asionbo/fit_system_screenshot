@@ -39,27 +39,39 @@ public class FitScreenShotManager {
         this.methodChannel.setMethodCallHandler((call, result) -> {
             String methodName = call.method;
             if (TextUtils.equals("updateScrollArea", methodName) && this.touchParentView != null) {
-                final Map<String, Integer> args = (Map<String, Integer>) call.arguments;
-                Log.d(TAG, "updateScrollArea args: " + args);
-                ViewGroup.MarginLayoutParams layoutParams = (ViewGroup.MarginLayoutParams) this.touchParentView.getLayoutParams();
-                layoutParams.leftMargin = args.get("left");
-                layoutParams.topMargin = args.get("top");
-                layoutParams.width = args.get("width");
-                layoutParams.height = args.get("height");
-                this.touchParentView.setLayoutParams(layoutParams);
-                result.success(true);
+                if (call.arguments instanceof Map) {
+                    final Map<String, Integer> args = (Map<String, Integer>) call.arguments;
+                    Log.d(TAG, "updateScrollArea args: " + args);
+                    ViewGroup.MarginLayoutParams layoutParams = (ViewGroup.MarginLayoutParams) this.touchParentView.getLayoutParams();
+                    layoutParams.leftMargin = args.get("left");
+                    layoutParams.topMargin = args.get("top");
+                    layoutParams.width = args.get("width");
+                    layoutParams.height = args.get("height");
+                    this.touchParentView.setLayoutParams(layoutParams);
+                    result.success(true);
+                } else {
+                    result.error("INVALID_ARGUMENTS", "Arguments are not a Map", null);
+                }
             } else if (TextUtils.equals("updateScrollLength", methodName) && this.scrollView != null) {
-                final Map<String, Double> args = (Map<String, Double>) call.arguments;
-                Log.d(TAG, "updateScrollLength args: " + args);
-                double length = args.get("length");
-                this.scrollView.updateScrollLength(length);
-                result.success(true);
+                if (call.arguments instanceof Map) {
+                    final Map<String, Double> args = (Map<String, Double>) call.arguments;
+                    Log.d(TAG, "updateScrollLength args: " + args);
+                    double length = args.get("length");
+                    this.scrollView.updateScrollLength(length);
+                    result.success(true);
+                } else {
+                    result.error("INVALID_ARGUMENTS", "Arguments are not a Map", null);
+                }
             } else if (TextUtils.equals("updateScrollPosition", methodName) && this.scrollView != null) {
-                final Map<String, Double> args = (Map<String, Double>) call.arguments;
-                Log.d(TAG, "updateScrollPosition args: " + args);
-                int position = (int) Math.ceil(args.get("position"));
-                this.scrollView.scrollToWithoutCallback(position);
-                result.success(true);
+                if (call.arguments instanceof Map) {
+                    final Map<String, Double> args = (Map<String, Double>) call.arguments;
+                    Log.d(TAG, "updateScrollPosition args: " + args);
+                    int position = (int) Math.ceil(args.get("position"));
+                    this.scrollView.scrollToWithoutCallback(position);
+                    result.success(true);
+                } else {
+                    result.error("INVALID_ARGUMENTS", "Arguments are not a Map", null);
+                }
             }
         });
         this.eventChannel = new EventChannel(messenger, EVENT_CHANNEL_NAME);
@@ -79,9 +91,15 @@ public class FitScreenShotManager {
 
     void detachFromEngine() {
         Log.d(TAG, "detachFromEngine");
-        this.methodChannel.setMethodCallHandler(null);
-        this.eventChannel.setStreamHandler(null);
-        this.eventSink.endOfStream();
+        if (this.methodChannel != null) {
+            this.methodChannel.setMethodCallHandler(null);
+        }
+        if (this.eventChannel != null) {
+            this.eventChannel.setStreamHandler(null);
+        }
+        if (this.eventSink != null) {
+            this.eventSink.endOfStream();
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -105,5 +123,4 @@ public class FitScreenShotManager {
     void detachFromActivity() {
         Log.d(TAG, "detachFromActivity");
     }
-
 }
